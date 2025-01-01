@@ -1,10 +1,33 @@
-from sqlmodel import Field, Relationship, SQLModel
+import enum
+from sqlmodel import Column, Enum, Field, Relationship, SQLModel
+
+
+class MoodVariant(enum.Enum):
+    VERY_POSITIVE = "very positive"
+    POSITIVE = "positive"
+    NEUTRAL = "neutral"
+    NEGATIVE = "negative"
+    VERY_NEGATIVE = "very negative"
+
+    def button_variant(self) -> str:
+        return {
+            MoodVariant.VERY_POSITIVE: "success",
+            MoodVariant.POSITIVE: "primary",
+            MoodVariant.NEUTRAL: "default",
+            MoodVariant.NEGATIVE: "warning",
+            MoodVariant.VERY_NEGATIVE: "error",
+        }.get(self, "default")
 
 
 class Mood(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(unique=True, index=True)
-    color: str = Field(unique=True)
+    variant: MoodVariant = Field(
+        sa_column=Column(
+            Enum(MoodVariant),
+            default=MoodVariant.NEUTRAL,
+        )
+    )
 
     logs: list["Log"] = Relationship(back_populates="mood", cascade_delete=True)
 

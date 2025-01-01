@@ -1,14 +1,12 @@
-from sqlmodel import SQLModel, create_engine, text
+from sqlmodel import Session, create_engine, select
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header
+from textual.containers import Container
+from textual.widgets import Button, Footer, Header
+from kanjo.models import Log, Mood
 from kanjo.settings import APP_NAME, DB_URL, Settings
-from kanjo.models import *
-
-
-def setup_db_and_tables(engine) -> None:
-    SQLModel.metadata.create_all(engine)
-    with engine.connect() as connection:
-        connection.execute(text("PRAGMA foreign_keys=ON"))
+from kanjo.widgets.logs_table import LogsTable
+from kanjo.widgets.mood_picker import MoodPicker
+from kanjo.db import setup_db_and_tables
 
 
 class KanjoApp(App):
@@ -33,5 +31,34 @@ class KanjoApp(App):
         self.theme = self.settings.theme
 
     def compose(self) -> ComposeResult:
+        self.mood_picker = MoodPicker()
+        self.logs_table = LogsTable()
+
         yield Header()
+        yield Container(
+            self.mood_picker,
+            self.logs_table,
+            id="main",
+        )
         yield Footer()
+
+    def on_mount(self) -> None:
+        # TODO: refactor db queries out
+        with Session(self.engine) as session:
+            moods_in_db = session.exec(select(Mood))
+            assert moods_in_db
+
+            for mood in moods_in_db:
+                self.mood_picker.mount(
+                    Button(
+                        label=mood.name,
+                        variant=mood.variant.button_variant(),
+                    )
+                )
+
+            logs_in_db = session.exec(select(Log))
+            if not logs_in_db:
+                return
+
+            for log in logs_in_db:
+                self.logs_table.add_row(key=f"{log.id}", label=log.message)

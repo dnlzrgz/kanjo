@@ -9,7 +9,7 @@ class MoodVariant(enum.Enum):
     NEGATIVE = "negative"
     VERY_NEGATIVE = "very negative"
 
-    def button_variant(self) -> str:
+    def button_variants(self) -> str:
         return {
             MoodVariant.VERY_POSITIVE: "success",
             MoodVariant.POSITIVE: "primary",
@@ -17,6 +17,10 @@ class MoodVariant(enum.Enum):
             MoodVariant.NEGATIVE: "warning",
             MoodVariant.VERY_NEGATIVE: "error",
         }.get(self, "default")
+
+    @classmethod
+    def list_variants(cls) -> list[tuple[str, str]]:
+        return [(mood.name, mood.value) for mood in cls]
 
 
 class Mood(SQLModel, table=True):

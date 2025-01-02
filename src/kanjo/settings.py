@@ -18,7 +18,7 @@ CONFIG_FILE_PATH: Path = APP_DIR / "config.toml"
 
 class Settings(BaseSettings):
     version: str = version(APP_NAME)
-    theme: str = "dracula"
+    theme: str = "catppuccin-latte"
 
     model_config = SettingsConfigDict(
         toml_file=CONFIG_FILE_PATH,

@@ -8,10 +8,9 @@ from textual.widgets import Button, Footer, Header
 from kanjo.messages import NewLog, NewMood, DeleteMood, UpdateMood
 from kanjo.models import Log, Mood, MoodVariant
 from kanjo.settings import APP_NAME, DB_URL, Settings
-from kanjo.widgets.logs_table import LogsTable
-from kanjo.widgets.mood_picker import MoodPicker
+from kanjo.widgets import NewMoodModal, LogsTable, MoodPicker
 from kanjo.db import setup_db_and_tables
-from kanjo.widgets.new_mood_modal import NewMoodModal
+from kanjo.widgets.confirm_modal import ConfirmModal
 
 
 class KanjoApp(App):
@@ -100,7 +99,37 @@ class KanjoApp(App):
 
     @on(DeleteMood)
     def delete_mood(self, message: DeleteMood) -> None:
-        self.notify(f"deleting mood {message.mood_id}")
+        mood_id = message.mood_id
+        with Session(self.engine) as session:
+            mood = session.exec(select(Mood).where(Mood.id == mood_id)).first()
+            if not mood:
+                self.notify("selected mood not found!", severity="error")
+                return
+
+        async def callback(response: bool | None = False) -> None:
+            if not response:
+                return
+
+            with Session(self.engine) as session:
+                try:
+                    session.delete(mood)
+                    session.commit()
+
+                    await self.refresh_moods()
+                except Exception:
+                    self.notify(
+                        f'something went wrong while deleting mood "{mood.name}"',
+                        severity="error",
+                    )
+
+        self.push_screen(
+            ConfirmModal(
+                border_title="delete mood",
+                message=f'are you sure that you want to delete mood "{mood.name}"?',
+                action_name="delete",
+            ),
+            callback,
+        )
 
     @on(NewLog)
     def add_log(self, message: NewLog) -> None:
